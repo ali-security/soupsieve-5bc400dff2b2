@@ -590,6 +590,51 @@ class TestInvalid(util.TestCase):
         with self.assertRaises(TypeError):
             sv.filter('div', "not a tag", flags=flags)
 
+    def test_excessive_selectors(self):
+        """Test excessive selectors."""
+
+        # Build a large selector string: "a,a,a,...,a"
+        count = 10000
+        selector = ",".join("a" for _ in range(count))
+
+        # Compile the selector
+        with self.assertRaises(ValueError):
+            sv.compile(selector)
+
+    def test_excessive_custom_selectors(self):
+        """Test excessive custom selectors."""
+
+        # Build a large selector string: "a,a,a,...,a"
+        count = 10000
+        selector = ",".join("a" for _ in range(count))
+
+        # Compile the selector
+        with self.assertRaises(ValueError):
+            sv.compile('div:--custom', custom={':--custom': selector})
+
+    def test_excessive_custom_and_normal_selectors(self):
+        """Test excessive custom and normal selectors."""
+
+        count = 5000
+        selector = ",".join("a" for _ in range(count))
+
+        # Compile the selector
+        with self.assertRaises(ValueError):
+            sv.compile(':is({}):--custom'.format(selector), custom={':--custom': selector})
+
+    def test_excessive_expanded_pseudo_class_selectors(self):
+        """Test that pseudo-classes which expand to predefined selectors count towards the limit."""
+
+        count = 4000
+
+        # A pattern with this many tokens is under the limit when only its own tokens are counted.
+        self.assertIsNotNone(sv.compile(",".join("a" for _ in range(count))))
+
+        # `:checked` expands to a predefined selector list, and that expansion counts as well,
+        # so the same number of tokens now exceeds the limit.
+        with self.assertRaises(ValueError):
+            sv.compile(":checked" * count)
+
 
 class TestSyntaxErrorReporting(util.TestCase):
     """Test reporting of syntax errors."""
